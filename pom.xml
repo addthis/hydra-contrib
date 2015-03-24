@@ -43,6 +43,7 @@
   </licenses>
 
   <properties>
+    <at.check.jacoco.skip>true</at.check.jacoco.skip>
   </properties>
 
   <!-- included in every submodule -->
