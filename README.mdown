@@ -1,0 +1,60 @@
+## additional modules for [hydra](https://github.com/addthis/hydra)
+
+## module list
+- none just this minute, but some are planning to be moved soon(tm)
+
+## Documentation and References
+
+These will vary by the specific add-on module, so be sure to check
+their individual READMEs as needed.
+
+## Building
+
+Assuming you have [Apache Maven](http://maven.apache.org/) installed
+and configured:
+
+    mvn package
+
+Should compile and build jars.  All hydra dependencies should be
+available on maven central but hydra itself is not yet published.
+
+Therefore, to use these add-ons, you'll want to build one or more
+of them and either add them to your class path or to your own uber
+jar based on the one in hydra.
+
+## System dependencies
+
+JDK 8 is required.  Hydra has been developed on Linux (Centos 6) and
+should work on any modern Linux distro.  Other unix-like systems
+should work with minor changes but have not been tested.  Mac OSX
+should work for building and running local-stack (see below).
+
+See [hydra](https://github.com/addthis/hydra) for additional details
+on running full cluster operations or possibly individual add-ons if
+they demand something exceedingly strange (but we'll try to organize
+them here).
+
+### Discussion
+
+Mailing list: http://groups.google.com/group/hydra-oss
+
+[Freenode](http://freenode.net/) channel: `#hydra`
+
+### Versioning
+
+It's x.y.z where:
+
+ * x: Something Big Happened
+ * y: next release
+ * z: strive for bug fix only
+
+However, we will pretty much be trying to follow the release
+numbers of the primary hydra project simply for convenience's
+sake.
+
+### License
+
+hydra is released under the Apache License Version 2.0.  See
+[Apache](http://www.apache.org/licenses/LICENSE-2.0) or the LICENSE
+file in this distribution for details.
+
