@@ -136,8 +136,7 @@ public final class ConsumerUtils {
         if((errorCode == ErrorMapping.UnknownTopicOrPartitionCode()) ||
            (errorCode == ErrorMapping.NotLeaderForPartitionCode())) {
             throw new UnknownTopicOrPartitionException("offset query failed - assuming partition has moved and trying again");
-        }
-        else if (response.hasError()) {
+        } else if (response.hasError()) {
             Throwable exception = ErrorMapping.exceptionFor(response.errorCode(topic, partition));
             log.error("failed to get offset for {}-{} time {} from broker: {}:{}", topic, partition, whichTime,
                     consumer.host(), consumer.port(), ErrorMapping.exceptionFor(response.errorCode(topic, partition)));
@@ -146,13 +145,11 @@ public final class ConsumerUtils {
         long[] offsets = response.offsets(topic, partition);
         if (offsets.length > 0) {
             return offsets[0];
-        }
         // if no offsets before time are available, return earliest
-        else if (whichTime != OffsetRequest.EarliestTime()) {
+        } else if (whichTime != OffsetRequest.EarliestTime()) {
             return earliestOffsetAvailable(consumer, topic, partition);
-        }
         // if request earliest offset returns nothing, then everything is completely borked
-        else {
+        } else {
             throw new RuntimeException(String.format("earliest offset does not exist for %s-%d", topic, partition));
         }
     }
@@ -200,7 +197,8 @@ public final class ConsumerUtils {
         return new ConsumerConfig(config);
     }
 
-    public static Map<String, List<KafkaStream<Bundle, Bundle>>> newBundleStreams(String zookeeper, Map<String, Integer> topicStreams, Map<String,String> overrides) {
+    public static Map<String, List<KafkaStream<Bundle, Bundle>>> newBundleStreams(
+            String zookeeper, Map<String, Integer> topicStreams, Map<String,String> overrides) {
         ConsumerConnector connector = kafka.consumer.Consumer.createJavaConsumerConnector(newConsumerConfig(zookeeper, overrides));
         return connector.createMessageStreams(topicStreams, new BundleDecoder(), new BundleDecoder());
     }

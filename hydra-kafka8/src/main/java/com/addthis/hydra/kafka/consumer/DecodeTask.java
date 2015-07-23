@@ -63,7 +63,7 @@ class DecodeTask implements Runnable {
     public void run() {
         try {
             //noinspection StatementWithEmptyBody
-            while (running.get() && decodeUnlessEnded()) ;
+            while (running.get() && decodeUnlessEnded()) {}
             log.info("finished decoding");
         } catch (BenignKafkaException ignored) {
         } catch (Exception e) {
@@ -97,8 +97,7 @@ class DecodeTask implements Runnable {
                 // if no bundleizer is specified, then default to calling DataChannelCodec.decodeBundle directly.
                 if(bundleizerFactory == null) {
                     bundle = DataChannelCodec.decodeBundle(new ListBundle(format), messageBytes);
-                }
-                else {
+                } else {
                     Bundleizer bundleizer = bundleizerFactory.createBundleizer(new ByteArrayInputStream(messageBytes), format);
                     bundle = bundleizer.next();
                 }

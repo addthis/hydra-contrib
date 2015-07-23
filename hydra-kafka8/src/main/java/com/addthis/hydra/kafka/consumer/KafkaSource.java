@@ -97,7 +97,7 @@ public class KafkaSource extends TaskDataSource {
     private ExecutorService decodeExecutor;
 
     @Override
-    public Bundle next() throws DataChannelError {
+    public Bundle next() {
         if (!running.get()) {
             return null;
         }
@@ -124,7 +124,7 @@ public class KafkaSource extends TaskDataSource {
     }
 
     @Override
-    public Bundle peek() throws DataChannelError {
+    public Bundle peek() {
         BundleWrapper bundle = null;
         int retries = 0;
         while (bundle == null && retries < pollRetries) {
@@ -171,14 +171,14 @@ public class KafkaSource extends TaskDataSource {
             this.markDb = new PageDB<>(LessFiles.initDirectory(markDir), SimpleMark.class, 100, 100);
             // move to init method
             this.fetchExecutor = new ThreadPoolExecutor(fetchThreads, fetchThreads,
-                            0l, TimeUnit.SECONDS,
+                            0L, TimeUnit.SECONDS,
                             new LinkedBlockingQueue<>(),
                             new ThreadFactoryBuilder()
                                     .setNameFormat("source-kafka-fetch-%d")
                                     .setDaemon(true)
                                     .build());
             this.decodeExecutor = new ThreadPoolExecutor(decodeThreads, decodeThreads,
-                            0l, TimeUnit.SECONDS,
+                            0L, TimeUnit.SECONDS,
                             new LinkedBlockingQueue<>(),
                             new ThreadFactoryBuilder()
                                     .setNameFormat("source-kafka-decode-%d")
