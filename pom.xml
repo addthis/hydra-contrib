@@ -21,6 +21,7 @@
     <version>5.4.6-SNAPSHOT</version>
   </parent>
 
+  <groupId>com.addthis.hydra.contrib</groupId>
   <artifactId>hydra-contrib-parent</artifactId>
   <version>5.4.6-SNAPSHOT</version>
   <packaging>pom</packaging>
@@ -55,6 +56,7 @@
 
   <modules>
     <module>hydra-hdfs</module>
+    <module>hydra-kafka8</module>
   </modules>
 
   <scm>
