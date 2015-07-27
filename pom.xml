@@ -45,6 +45,7 @@
 
   <properties>
     <at.check.jacoco.skip>true</at.check.jacoco.skip>
+    <hydra-oss.version>5.5.0</hydra-oss.version>
   </properties>
 
   <!-- included in every submodule -->
@@ -57,6 +58,58 @@
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
         <version>1.2.16</version>
+      </dependency>
+
+      <!-- just relist these modules here to make jenkins happy -->
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-avro</artifactId>
+        <version>${hydra-oss.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-data</artifactId>
+        <version>${hydra-oss.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-essentials</artifactId>
+        <version>${hydra-oss.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-filters</artifactId>
+        <version>${hydra-oss.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-main</artifactId>
+        <version>${hydra-oss.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-api</artifactId>
+        <version>${hydra-oss.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-mq</artifactId>
+        <version>${hydra-oss.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-store</artifactId>
+        <version>${hydra-oss.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-task</artifactId>
+        <version>${hydra-oss.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.addthis.hydra</groupId>
+        <artifactId>hydra-uber</artifactId>
+        <version>${hydra-oss.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
