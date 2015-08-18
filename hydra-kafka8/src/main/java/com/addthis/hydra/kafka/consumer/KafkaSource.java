@@ -13,6 +13,8 @@
  */
 package com.addthis.hydra.kafka.consumer;
 
+import java.io.File;
+
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,6 +45,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.curator.framework.CuratorFramework;
 
 import org.joda.time.DateTime;
@@ -68,6 +71,9 @@ public class KafkaSource extends TaskDataSource {
     private String dateFormat = "YYMMdd";
     @JsonProperty
     private String markDir = "marks";
+    /** Ignore the mark directory */
+    @JsonProperty
+    private boolean ignoreMarkDir;
     /** Specifies conversion to bundles.  If null, then uses DataChannelCodec.decodeBundle */
     @JsonProperty
     private BundleizerFactory format;
@@ -166,6 +172,13 @@ public class KafkaSource extends TaskDataSource {
     @Override
     public void init() {
         try {
+            if (ignoreMarkDir) {
+                File md = new File(markDir);
+                if (md.exists()) {
+                    FileUtils.deleteDirectory(md);
+                    log.info("Deleted marks directory : {}", md);
+                }
+            }
             this.messageQueue = new LinkedBlockingQueue<>(queueSize);
             this.bundleQueue = new LinkedBlockingQueue<>(queueSize);
             this.markDb = new PageDB<>(LessFiles.initDirectory(markDir), SimpleMark.class, 100, 100);
