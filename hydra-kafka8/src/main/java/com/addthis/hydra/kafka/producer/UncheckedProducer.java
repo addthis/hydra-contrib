@@ -73,10 +73,11 @@ public class UncheckedProducer<K,V> implements Producer<K,V> {
                 log.error("kafka buffer full: ", exception);
             } else if(exception != null) {
                 kafkaSendError.mark();
-                log.error("kafka send failed for topic: " + metadata.topic() +
-                        ", partition: " + metadata.partition() + ", offset: " + metadata.offset() + "," +
-                        " verify that the topic has been created and the partition has an available leader: ",
-                        exception);
+                if(metadata != null) {
+                    log.error("kafka send failed for topic: {}, partition: {}, offset: {}",
+                            metadata.topic(), metadata.partition(), metadata.offset());
+                }
+                log.error("kafka send exception (verify that the topic has been created and the partition has an available leader): ", exception);
             }
             if(customCallback != null) {
                 customCallback.onCompletion(metadata, exception);
