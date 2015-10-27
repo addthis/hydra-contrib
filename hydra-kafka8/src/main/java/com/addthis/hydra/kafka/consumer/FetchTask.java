@@ -82,33 +82,34 @@ class FetchTask implements Runnable {
             String sourceIdentifier = topic + "-" + partitionId;
             final long endOffset = ConsumerUtils.latestOffsetAvailable(consumer, topic, partitionId, offsetAttempts);
             final SimpleMark previousMark = markDb.get(new DBKey(0, sourceIdentifier));
-            long offset = -1;
+            long startOffset = -1;
             if (previousMark != null) {
-                offset = previousMark.getIndex();
+                startOffset = previousMark.getIndex();
             } else if (startTime != null) {
-                offset = ConsumerUtils.getOffsetBefore(consumer, topic, partitionId, startTime.getMillis(), offsetAttempts);
+                startOffset = ConsumerUtils.getOffsetBefore(consumer, topic, partitionId, startTime.getMillis(), offsetAttempts);
                 log.info("no previous mark for host: {}, partition: {}, starting from offset: {}, closest to: {}",
-                         consumer.host(), partitionId, offset, startTime);
+                         consumer.host(), partitionId, startOffset, startTime);
             }
-            if (offset == -1) {
+            if (startOffset == -1) {
                 log.info("no previous mark for host: {}:{}, topic: {}, partition: {}, no offsets available for " +
                          "startTime: {}, starting from earliest", consumer.host(), consumer.port(),
                          topic, partitionId, startTime);
-                offset = ConsumerUtils.earliestOffsetAvailable(consumer, topic, partitionId, offsetAttempts);
-            } else if (offset > endOffset) {
+                startOffset = ConsumerUtils.earliestOffsetAvailable(consumer, topic, partitionId, offsetAttempts);
+            } else if (startOffset > endOffset) {
                 log.warn("initial offset for: {}:{}, topic: {}, partition: {} is beyond latest, {} > {}; kafka data " +
                          "was either wiped (resetting offsets) or corrupted - skipping " +
                          "ahead to offset {} to recover consuming from latest", consumer.host(), consumer.port(),
-                         topic, partitionId, offset, endOffset, endOffset);
-                offset = endOffset;
+                         topic, partitionId, startOffset, endOffset, endOffset);
+                startOffset = endOffset;
                 // Offsets are normally updated when the bundles are consumed from source.next() - since we wont
                 // be fetching any bundles to be consumed, we need to update offset map (that gets persisted to marks)
                 // here. The sourceOffsets map probably *should not* be modified anywhere else outside of next().
-                sourceOffsets.put(sourceIdentifier, offset);
+                sourceOffsets.put(sourceIdentifier, startOffset);
             }
             log.info("starting to consume topic: {}, partition: {} from broker: {}:{} at offset: {}, until offset: {}",
-                    topic, partitionId, consumer.host(), consumer.port(), offset, endOffset);
+                    topic, partitionId, consumer.host(), consumer.port(), startOffset, endOffset);
             // fetch from broker, add to queue (decoder threads will process queue in parallel)
+            long offset = startOffset;
             while (running.get() && (offset < endOffset)) {
                 FetchRequest request = new FetchRequestBuilder().addFetch(topic, partitionId, offset, fetchSize).build();
                 FetchResponse response = consumer.fetch(request);
@@ -150,8 +151,12 @@ class FetchTask implements Runnable {
 
                 if (messageSet != null) {
                     for (MessageAndOffset messageAndOffset : messageSet) {
-                        putWhileRunning(messageQueue, new MessageWrapper(messageAndOffset, consumer.host(), topic,
-                                                                         partitionId, sourceIdentifier), running);
+                        // Fetch requests sometimes return bundles that come before the requested offset (presumably
+                        // due to batching).  Ignore those early bundles until reaching the desired offset.
+                        if (messageAndOffset.offset() >= startOffset) {
+                            putWhileRunning(messageQueue, new MessageWrapper(messageAndOffset, consumer.host(), topic,
+                                    partitionId, sourceIdentifier), running);
+                        }
                         offset = messageAndOffset.nextOffset();
                     }
                 }
