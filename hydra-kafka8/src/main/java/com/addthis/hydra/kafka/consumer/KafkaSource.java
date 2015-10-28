@@ -123,7 +123,12 @@ public class KafkaSource extends TaskDataSource {
             bundleQueue.add(bundleQueueEndMarker);
             return null;
         }
-        sourceOffsets.put(bundle.sourceIdentifier, bundle.offset);
+        // Although the bundle queue is guaranteed to be ordered by offsets, concurrent calls to
+        // next() can complete (and update offsets) in arbitrary order.  Assuming the threads calling
+        // next() will not be interrupted, we can just always take the max offset per partition since all
+        // earlier bundles will eventually be returned to some next() call.
+        sourceOffsets.compute(bundle.sourceIdentifier, (partition, previous) ->
+                previous == null ? bundle.offset : Math.max(previous, bundle.offset));
         return bundle.bundle;
     }
 
