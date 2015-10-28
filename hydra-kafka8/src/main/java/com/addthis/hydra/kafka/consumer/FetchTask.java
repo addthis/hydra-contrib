@@ -106,7 +106,7 @@ class FetchTask implements Runnable {
                 // here. The sourceOffsets map probably *should not* be modified anywhere else outside of next().
                 sourceOffsets.put(sourceIdentifier, startOffset);
             }
-            log.info("starting to consume topic: {}, partition: {} from broker: {}:{} at offset: {}, until offset: {}",
+            log.info("started consuming topic: {}, partition: {}, from broker: {}:{}, at offset: {}, until offset: {}",
                     topic, partitionId, consumer.host(), consumer.port(), startOffset, endOffset);
             // fetch from broker, add to queue (decoder threads will process queue in parallel)
             long offset = startOffset;
@@ -161,7 +161,7 @@ class FetchTask implements Runnable {
                     }
                 }
             }
-            log.info("finished consuming from broker: {}:{}, topic: {}, partition: {}, offset: {}", consumer.host(),
+            log.info("finished consuming topic: {}, partition: {}, from broker: {}:{}, at offset: {}", consumer.host(),
                      consumer.port(), topic, partitionId, offset);
         } catch (BenignKafkaException ignored) {
         } catch (Exception e) {
