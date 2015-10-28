@@ -14,7 +14,6 @@
 package com.addthis.hydra.kafka.consumer;
 
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -48,28 +47,28 @@ class FetchTask implements Runnable {
     private static final int offsetAttempts = Parameter.intValue(FetchTask.class + ".offsetAttempts", 3);
 
     private KafkaSource kafkaSource;
-    private final CountDownLatch fetchLatch;
     private final String topic;
     private final PartitionMetadata partition;
     private final DateTime startTime;
+    private final LinkedBlockingQueue<MessageWrapper> messageQueue;
 
-    public FetchTask(KafkaSource kafkaSource, CountDownLatch fetchLatch, String topic, PartitionMetadata partition, DateTime startTime) {
+    public FetchTask(KafkaSource kafkaSource, String topic, PartitionMetadata partition, DateTime startTime, LinkedBlockingQueue<MessageWrapper> messageQueue) {
         this.kafkaSource = kafkaSource;
-        this.fetchLatch = fetchLatch;
         this.topic = topic;
         this.partition = partition;
         this.startTime = startTime;
+        this.messageQueue = messageQueue;
     }
 
     @Override
     public void run() {
-        consume(kafkaSource.running, fetchLatch, topic, partition, kafkaSource.markDb, startTime,
-                kafkaSource.messageQueue, kafkaSource.sourceOffsets);
+        consume(this.kafkaSource.running, this.topic, this.partition, this.kafkaSource.markDb, this.startTime,
+                this.messageQueue, this.kafkaSource.sourceOffsets);
     }
 
-    private static void consume(AtomicBoolean running, CountDownLatch latch,
-            String topic, PartitionMetadata partition, PageDB<SimpleMark> markDb, DateTime startTime,
-            LinkedBlockingQueue<MessageWrapper> messageQueue, ConcurrentMap<String, Long> sourceOffsets) {
+    private static void consume(AtomicBoolean running, String topic, PartitionMetadata partition,
+            PageDB<SimpleMark> markDb, DateTime startTime, LinkedBlockingQueue<MessageWrapper> messageQueue,
+            ConcurrentMap<String, Long> sourceOffsets) {
         SimpleConsumer consumer = null;
         try {
             if (!running.get()) {
@@ -167,7 +166,7 @@ class FetchTask implements Runnable {
         } catch (Exception e) {
             log.error("kafka consume thread failed: ", e);
         } finally {
-            latch.countDown();
+            putWhileRunning(messageQueue, MessageWrapper.messageQueueEndMarker, running);
             if(consumer != null) {
                 consumer.close();
             }

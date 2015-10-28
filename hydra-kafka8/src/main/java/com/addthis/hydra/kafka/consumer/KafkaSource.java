@@ -53,7 +53,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.addthis.hydra.kafka.consumer.BundleWrapper.bundleQueueEndMarker;
-import static com.addthis.hydra.kafka.consumer.MessageWrapper.messageQueueEndMarker;
 import kafka.javaapi.PartitionMetadata;
 import kafka.javaapi.TopicMetadata;
 
@@ -94,7 +93,6 @@ public class KafkaSource extends TaskDataSource {
 
     PageDB<SimpleMark> markDb;
     AtomicBoolean running;
-    LinkedBlockingQueue<MessageWrapper> messageQueue;
     LinkedBlockingQueue<BundleWrapper> bundleQueue;
     CuratorFramework zkClient;
     final ConcurrentMap<String, Long> sourceOffsets = new ConcurrentHashMap<>();
@@ -179,7 +177,6 @@ public class KafkaSource extends TaskDataSource {
                     log.info("Deleted marks directory : {}", md);
                 }
             }
-            this.messageQueue = new LinkedBlockingQueue<>(queueSize);
             this.bundleQueue = new LinkedBlockingQueue<>(queueSize);
             this.markDb = new PageDB<>(LessFiles.initDirectory(markDir), SimpleMark.class, 100, 100);
             // move to init method
@@ -204,18 +201,14 @@ public class KafkaSource extends TaskDataSource {
             TopicMetadata metadata = ConsumerUtils.getTopicMetadata(zkClient, seedBrokers, topic);
 
             final Integer[] shards = config.calcShardList(metadata.partitionsMetadata().size());
-            final CountDownLatch fetchLatch = new CountDownLatch(shards.length);
-            for (final int shard : shards) {
-                final PartitionMetadata partition = metadata.partitionsMetadata().get(shard);
-                FetchTask fetcher = new FetchTask(this, fetchLatch, topic, partition, startTime);
-                fetchExecutor.execute(fetcher);
-            }
-            fetchExecutor.submit(new MarkEndTask<>(fetchLatch, running, messageQueue, messageQueueEndMarker));
-
             final ListBundleFormat bundleFormat = new ListBundleFormat();
-            final CountDownLatch decodeLatch = new CountDownLatch(decodeThreads);
-            Runnable decoder = new DecodeTask(decodeLatch, format, bundleFormat, running, messageQueue, bundleQueue);
-            for (int i = 0; i < decodeThreads; i++) {
+            final CountDownLatch decodeLatch = new CountDownLatch(shards.length);
+            for (final int shard : shards) {
+                LinkedBlockingQueue<MessageWrapper> messageQueue = new LinkedBlockingQueue<>(this.queueSize);
+                final PartitionMetadata partition = metadata.partitionsMetadata().get(shard);
+                FetchTask fetcher = new FetchTask(this, topic, partition, startTime, messageQueue);
+                fetchExecutor.execute(fetcher);
+                Runnable decoder = new DecodeTask(decodeLatch, format, bundleFormat, running, messageQueue, bundleQueue);
                 decodeExecutor.execute(decoder);
             }
             decodeExecutor.submit(new MarkEndTask<>(decodeLatch, running, bundleQueue, bundleQueueEndMarker));
