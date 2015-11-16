@@ -160,8 +160,8 @@ class FetchTask implements Runnable {
                     }
                 }
             }
-            log.info("finished consuming topic: {}, partition: {}, from broker: {}:{}, at offset: {}", consumer.host(),
-                     consumer.port(), topic, partitionId, offset);
+            log.info("finished consuming topic: {}, partition: {}, from broker: {}:{}, at offset: {}",
+                    topic, partitionId, consumer.host(), consumer.port(), offset);
         } catch (BenignKafkaException ignored) {
         } catch (Exception e) {
             log.error("kafka consume thread failed: ", e);
