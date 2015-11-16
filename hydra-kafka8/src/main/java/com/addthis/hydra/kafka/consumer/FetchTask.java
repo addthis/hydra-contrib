@@ -14,7 +14,6 @@
 package com.addthis.hydra.kafka.consumer;
 
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -48,28 +47,28 @@ class FetchTask implements Runnable {
     private static final int offsetAttempts = Parameter.intValue(FetchTask.class + ".offsetAttempts", 3);
 
     private KafkaSource kafkaSource;
-    private final CountDownLatch fetchLatch;
     private final String topic;
     private final PartitionMetadata partition;
     private final DateTime startTime;
+    private final LinkedBlockingQueue<MessageWrapper> messageQueue;
 
-    public FetchTask(KafkaSource kafkaSource, CountDownLatch fetchLatch, String topic, PartitionMetadata partition, DateTime startTime) {
+    public FetchTask(KafkaSource kafkaSource, String topic, PartitionMetadata partition, DateTime startTime, LinkedBlockingQueue<MessageWrapper> messageQueue) {
         this.kafkaSource = kafkaSource;
-        this.fetchLatch = fetchLatch;
         this.topic = topic;
         this.partition = partition;
         this.startTime = startTime;
+        this.messageQueue = messageQueue;
     }
 
     @Override
     public void run() {
-        consume(kafkaSource.running, fetchLatch, topic, partition, kafkaSource.markDb, startTime,
-                kafkaSource.messageQueue, kafkaSource.sourceOffsets);
+        consume(this.kafkaSource.running, this.topic, this.partition, this.kafkaSource.markDb, this.startTime,
+                this.messageQueue, this.kafkaSource.sourceOffsets);
     }
 
-    private static void consume(AtomicBoolean running, CountDownLatch latch,
-            String topic, PartitionMetadata partition, PageDB<SimpleMark> markDb, DateTime startTime,
-            LinkedBlockingQueue<MessageWrapper> messageQueue, ConcurrentMap<String, Long> sourceOffsets) {
+    private static void consume(AtomicBoolean running, String topic, PartitionMetadata partition,
+            PageDB<SimpleMark> markDb, DateTime startTime, LinkedBlockingQueue<MessageWrapper> messageQueue,
+            ConcurrentMap<String, Long> sourceOffsets) {
         SimpleConsumer consumer = null;
         try {
             if (!running.get()) {
@@ -82,33 +81,34 @@ class FetchTask implements Runnable {
             String sourceIdentifier = topic + "-" + partitionId;
             final long endOffset = ConsumerUtils.latestOffsetAvailable(consumer, topic, partitionId, offsetAttempts);
             final SimpleMark previousMark = markDb.get(new DBKey(0, sourceIdentifier));
-            long offset = -1;
+            long startOffset = -1;
             if (previousMark != null) {
-                offset = previousMark.getIndex();
+                startOffset = previousMark.getIndex();
             } else if (startTime != null) {
-                offset = ConsumerUtils.getOffsetBefore(consumer, topic, partitionId, startTime.getMillis(), offsetAttempts);
+                startOffset = ConsumerUtils.getOffsetBefore(consumer, topic, partitionId, startTime.getMillis(), offsetAttempts);
                 log.info("no previous mark for host: {}, partition: {}, starting from offset: {}, closest to: {}",
-                         consumer.host(), partitionId, offset, startTime);
+                         consumer.host(), partitionId, startOffset, startTime);
             }
-            if (offset == -1) {
+            if (startOffset == -1) {
                 log.info("no previous mark for host: {}:{}, topic: {}, partition: {}, no offsets available for " +
                          "startTime: {}, starting from earliest", consumer.host(), consumer.port(),
                          topic, partitionId, startTime);
-                offset = ConsumerUtils.earliestOffsetAvailable(consumer, topic, partitionId, offsetAttempts);
-            } else if (offset > endOffset) {
+                startOffset = ConsumerUtils.earliestOffsetAvailable(consumer, topic, partitionId, offsetAttempts);
+            } else if (startOffset > endOffset) {
                 log.warn("initial offset for: {}:{}, topic: {}, partition: {} is beyond latest, {} > {}; kafka data " +
                          "was either wiped (resetting offsets) or corrupted - skipping " +
                          "ahead to offset {} to recover consuming from latest", consumer.host(), consumer.port(),
-                         topic, partitionId, offset, endOffset, endOffset);
-                offset = endOffset;
+                         topic, partitionId, startOffset, endOffset, endOffset);
+                startOffset = endOffset;
                 // Offsets are normally updated when the bundles are consumed from source.next() - since we wont
                 // be fetching any bundles to be consumed, we need to update offset map (that gets persisted to marks)
                 // here. The sourceOffsets map probably *should not* be modified anywhere else outside of next().
-                sourceOffsets.put(sourceIdentifier, offset);
+                sourceOffsets.put(sourceIdentifier, startOffset);
             }
-            log.info("starting to consume topic: {}, partition: {} from broker: {}:{} at offset: {}, until offset: {}",
-                    topic, partitionId, consumer.host(), consumer.port(), offset, endOffset);
+            log.info("started consuming topic: {}, partition: {}, from broker: {}:{}, at offset: {}, until offset: {}",
+                    topic, partitionId, consumer.host(), consumer.port(), startOffset, endOffset);
             // fetch from broker, add to queue (decoder threads will process queue in parallel)
+            long offset = startOffset;
             while (running.get() && (offset < endOffset)) {
                 FetchRequest request = new FetchRequestBuilder().addFetch(topic, partitionId, offset, fetchSize).build();
                 FetchResponse response = consumer.fetch(request);
@@ -150,19 +150,23 @@ class FetchTask implements Runnable {
 
                 if (messageSet != null) {
                     for (MessageAndOffset messageAndOffset : messageSet) {
-                        putWhileRunning(messageQueue, new MessageWrapper(messageAndOffset, consumer.host(), topic,
-                                                                         partitionId, sourceIdentifier), running);
+                        // Fetch requests sometimes return bundles that come before the requested offset (presumably
+                        // due to batching).  Ignore those early bundles until reaching the desired offset.
+                        if (messageAndOffset.offset() >= startOffset) {
+                            putWhileRunning(messageQueue, new MessageWrapper(messageAndOffset, consumer.host(), topic,
+                                    partitionId, sourceIdentifier), running);
+                        }
                         offset = messageAndOffset.nextOffset();
                     }
                 }
             }
-            log.info("finished consuming from broker: {}:{}, topic: {}, partition: {}, offset: {}", consumer.host(),
-                     consumer.port(), topic, partitionId, offset);
+            log.info("finished consuming topic: {}, partition: {}, from broker: {}:{}, at offset: {}",
+                    topic, partitionId, consumer.host(), consumer.port(), offset);
         } catch (BenignKafkaException ignored) {
         } catch (Exception e) {
             log.error("kafka consume thread failed: ", e);
         } finally {
-            latch.countDown();
+            putWhileRunning(messageQueue, MessageWrapper.messageQueueEndMarker, running);
             if(consumer != null) {
                 consumer.close();
             }
