@@ -52,7 +52,8 @@ class FetchTask implements Runnable {
     private final DateTime startTime;
     private final LinkedBlockingQueue<MessageWrapper> messageQueue;
 
-    public FetchTask(KafkaSource kafkaSource, String topic, PartitionMetadata partition, DateTime startTime, LinkedBlockingQueue<MessageWrapper> messageQueue) {
+    public FetchTask(KafkaSource kafkaSource, String topic, PartitionMetadata partition, DateTime startTime,
+            LinkedBlockingQueue<MessageWrapper> messageQueue) {
         this.kafkaSource = kafkaSource;
         this.topic = topic;
         this.partition = partition;
