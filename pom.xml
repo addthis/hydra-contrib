@@ -23,7 +23,7 @@
 
   <groupId>com.addthis.hydra.contrib</groupId>
   <artifactId>hydra-contrib-parent</artifactId>
-  <version>5.5.18</version>
+  <version>5.5.19-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Hydra Contrib: Parent</name>
@@ -124,6 +124,6 @@
     <connection>scm:git:git@github.com:addthis/hydra-contrib.git</connection>
     <developerConnection>scm:git:git@github.com:addthis/hydra-contrib.git</developerConnection>
     <url>https://github.com/addthis/hydra-contrib</url>
-    <tag>v5.5.18</tag>
+    <tag>HEAD</tag>
   </scm>
 </project>
