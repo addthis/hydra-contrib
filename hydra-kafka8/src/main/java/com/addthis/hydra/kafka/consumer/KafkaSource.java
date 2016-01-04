@@ -32,6 +32,7 @@ import com.addthis.bark.ZkUtil;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
+import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
@@ -76,6 +77,12 @@ public class KafkaSource extends TaskDataSource {
     /** Specifies conversion to bundles.  If null, then uses DataChannelCodec.decodeBundle */
     @JsonProperty
     private BundleizerFactory format;
+
+    @JsonProperty
+    private int metadataRetries = 6;
+    @Time(TimeUnit.MILLISECONDS)
+    @JsonProperty
+    private long metadataBackoff = 10000;
 
     @JsonProperty
     private int fetchThreads = 1;
@@ -203,7 +210,17 @@ public class KafkaSource extends TaskDataSource {
             final DateTime startTime = (startDate != null) ? DateUtil.getDateTime(dateFormat, startDate) : null;
 
             zkClient = ZkUtil.makeStandardClient(zookeeper, false);
-            TopicMetadata metadata = ConsumerUtils.getTopicMetadata(zkClient, seedBrokers, topic);
+            TopicMetadata metadata = null;
+            int metadataAttempt = 0;
+            while(metadata == null && metadataAttempt < metadataRetries) {
+                try {
+                    metadata = ConsumerUtils.getTopicMetadata(zkClient, seedBrokers, topic);
+                } catch(Exception e) {
+                    log.error("failed to get kafka metadata (attempt {} / {}) for topic: {}, using brokers: {}, error: {}", metadataAttempt, metadataRetries, topic, seedBrokers, e);
+                    Thread.sleep(metadataBackoff);
+                }
+                metadataAttempt++;
+            }
 
             final Integer[] shards = config.calcShardList(metadata.partitionsMetadata().size());
             final ListBundleFormat bundleFormat = new ListBundleFormat();
