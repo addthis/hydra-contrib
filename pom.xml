@@ -23,7 +23,7 @@
 
   <groupId>com.addthis.hydra.contrib</groupId>
   <artifactId>hydra-contrib-parent</artifactId>
-  <version>5.5.24-SNAPSHOT</version>
+  <version>5.5.30-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Hydra Contrib: Parent</name>
