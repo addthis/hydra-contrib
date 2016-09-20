@@ -44,20 +44,12 @@ public class ProducerUtils {
     public static Properties defaultConfig(String zookeeper, Map<String,String> overrides) {
         CuratorFramework zkClient = null;
         try {
-            Properties properties = new Properties();
             zkClient = KafkaUtils.newZkClient(zookeeper);
             Collection<Node> brokers = KafkaUtils.getSeedKafkaBrokers(zkClient, 3).values();
             if (brokers.isEmpty()) {
                 throw new RuntimeException("no kafka brokers available from zookeeper: " + zookeeper);
             }
-            properties.put("bootstrap.servers", brokerListString(brokers));
-            properties.put("acks", "all");
-            properties.put("compression.type", "gzip");
-            properties.put("linger.ms", "3000");
-            properties.put("retries", "3");
-            properties.put("block.on.buffer.full", "false");
-            properties.putAll(overrides);
-            return properties;
+            return defaultBootstrapConfig(brokerListString(brokers), overrides);
         } finally {
             if(zkClient != null) {
                 zkClient.close();
@@ -65,8 +57,24 @@ public class ProducerUtils {
         }
     }
 
+    public static Properties defaultBootstrapConfig(String bootstrapServers, Map<String,String> overrides) {
+        Properties properties = new Properties();
+        properties.put("bootstrap.servers", bootstrapServers);
+        properties.put("acks", "all");
+        properties.put("compression.type", "gzip");
+        properties.put("linger.ms", "3000");
+        properties.put("retries", "3");
+        properties.put("block.on.buffer.full", "false");
+        properties.putAll(overrides);
+        return properties;
+    }
+
     public static Properties defaultConfig(String zookeeper) {
         return defaultConfig(zookeeper, Collections.emptyMap());
+    }
+
+    public static Properties defaultBootstrapConfig(String bootstrapServers) {
+        return defaultBootstrapConfig(bootstrapServers, Collections.emptyMap());
     }
 
     public static Producer<Bundle,Bundle> newBundleProducer(String zookeeper, Map<String,String> overrides) {
