@@ -24,7 +24,7 @@
   <description>reading and writing for kafka 8 clusters</description>
 
   <properties>
-    <hydra.dep.apache.kafka.version>0.8.2.0</hydra.dep.apache.kafka.version>
+    <hydra.dep.apache.kafka.version>0.8.2.2</hydra.dep.apache.kafka.version>
     <hydra.dep.apache.curator.version>2.8.0</hydra.dep.apache.curator.version>
   </properties>
 
