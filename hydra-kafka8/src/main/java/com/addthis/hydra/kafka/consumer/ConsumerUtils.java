@@ -23,9 +23,12 @@ import java.util.Properties;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.hydra.kafka.KafkaUtils;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.kafka.common.Node;
 
+import org.eclipse.jetty.server.Connector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -197,19 +200,22 @@ public final class ConsumerUtils {
         return new ConsumerConfig(config);
     }
 
-    public static Map<String, List<KafkaStream<Bundle, Bundle>>> newBundleStreams(
+    public static Pair<ConsumerConnector, Map<String, List<KafkaStream<Bundle, Bundle>>>> newBundleStreams(
             String zookeeper, Map<String, Integer> topicStreams, Map<String,String> overrides) {
         ConsumerConnector connector = kafka.consumer.Consumer.createJavaConsumerConnector(newConsumerConfig(zookeeper, overrides));
-        return connector.createMessageStreams(topicStreams, new BundleDecoder(), new BundleDecoder());
+        return new ImmutablePair<>(
+                connector,
+                connector.createMessageStreams(topicStreams, new BundleDecoder(), new BundleDecoder()));
     }
 
-    public static KafkaStream<Bundle, Bundle> newBundleConsumer(String zookeeper, String topic, HashMap<String,String> overrides) {
+    public static Pair<ConsumerConnector, KafkaStream<Bundle, Bundle>> newBundleConsumer(String zookeeper, String topic, HashMap<String,String> overrides) {
         Map<String, Integer> topicStreams = new HashMap<>();
         topicStreams.put(topic, 1);
-        return newBundleStreams(zookeeper, topicStreams, overrides).get(topic).get(0);
+        Pair<ConsumerConnector, Map<String, List<KafkaStream<Bundle, Bundle>>>> connectorAndStreams = newBundleStreams(zookeeper, topicStreams, overrides);
+        return new ImmutablePair<>(connectorAndStreams.getLeft(), connectorAndStreams.getRight().get(topic).get(0));
     }
 
-    public static KafkaStream<Bundle, Bundle> newBundleConsumer(String zookeeper, String topic) {
+    public static Pair<ConsumerConnector, KafkaStream<Bundle, Bundle>> newBundleConsumer(String zookeeper, String topic) {
         return newBundleConsumer(zookeeper, topic, new HashMap<>());
     }
 }
