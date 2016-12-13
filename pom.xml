@@ -118,6 +118,7 @@
   <modules>
     <module>hydra-hdfs</module>
     <module>hydra-kafka8</module>
+    <module>hydra-kafka10</module>
   </modules>
 
   <scm>
