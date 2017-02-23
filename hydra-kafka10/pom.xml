@@ -13,8 +13,8 @@
 
     <properties>
         <bundle.version>2.8.1</bundle.version>
-        <kafka.version>0.10.1.0</kafka.version>
-        <metrics.version>3.1.2</metrics.version>
+        <kafka.version>0.10.2.0</kafka.version>
+        <metrics.version>2.2.0</metrics.version>
         <zookeeper.version>3.4.6</zookeeper.version>
     </properties>
 
@@ -24,6 +24,11 @@
                 <groupId>com.addthis</groupId>
                 <artifactId>bundle</artifactId>
                 <version>${bundle.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.addthis.metrics</groupId>
+                <artifactId>reporter-config</artifactId>
+                <version>2.2.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.kafka</groupId>
@@ -39,11 +44,6 @@
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-tools</artifactId>
                 <version>${kafka.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.dropwizard.metrics</groupId>
-                <artifactId>metrics-core</artifactId>
-                <version>${metrics.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
@@ -76,8 +76,8 @@
             <artifactId>kafka-tools</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.dropwizard.metrics</groupId>
-            <artifactId>metrics-core</artifactId>
+            <groupId>com.addthis.metrics</groupId>
+            <artifactId>reporter-config</artifactId>
         </dependency>
     </dependencies>
 
