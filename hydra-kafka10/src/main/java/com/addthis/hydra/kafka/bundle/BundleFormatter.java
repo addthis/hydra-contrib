@@ -1,4 +1,4 @@
-package com.addthis.basis.kafka.bundle;
+package com.addthis.hydra.kafka.bundle;
 
 import com.addthis.bundle.core.Bundle;
 import kafka.common.MessageFormatter;
