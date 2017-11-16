@@ -13,19 +13,19 @@
  */
 package com.addthis.hydra.task.output;
 
-import java.io.IOException;
-import java.io.OutputStream;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
+import com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Map;
 
 import static com.addthis.hydra.task.output.DefaultOutputWrapperFactory.getFileName;
 import static com.addthis.hydra.task.output.DefaultOutputWrapperFactory.wrapOutputStream;
@@ -43,7 +43,11 @@ import static com.addthis.hydra.task.output.PartitionData.getPartitionData;
  *   factory : {
  *     dir : "split",
  *     type: "hdfs",
- *     hdfsURL:"hdfs://hadoop-name-node:8020",
+ *     hdfsURL: "hdfs://hadoop-name-node:8020",
+ *     hdfsConfig: "{
+ *         "dfs.replication" : "3",
+ *         "hadoop.tmp.dir" : "/tmp/hydra-hadoop/"
+ *     }"
  *   },
  *   format : {
  *     type : "channel",
@@ -57,13 +61,30 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
     private final Path dir;
     private final FileSystem fileSystem;
 
+    private RateLimiter rateLimiter;
+
+    /**
+     * Instantiates an HDFSOutputWrapperFactory object
+     * @param hdfsUrl the url to the hdfs namenode, e.g. hdfs://whatever.com:9000
+     * @param dir the directory to write to, e.g. /user/hydra/job123
+     * @param configOpts arbitrary configuration options like those specified in core-site.xml, hdfs-site.xml etc
+     * @throws IOException
+     */
     @JsonCreator
     public HDFSOutputWrapperFactory(@JsonProperty(value = "hdfsUrl", required = true) String hdfsUrl,
-                                    @JsonProperty(value = "dir", required = true) Path dir) throws IOException {
+            @JsonProperty(value = "dir", required = true) Path dir,
+            @JsonProperty(value = "hdfsConfig") Map<String, String> configOpts,
+            @JsonProperty(value = "rateLimit") Integer rateLimit) throws IOException {
         Configuration config = new Configuration();
         config.set("fs.defaultFS", hdfsUrl);
         config.set("fs.automatic.close", "false");
         config.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
+        if (configOpts != null) {
+            configOpts.forEach(config::set);
+        }
+        if (rateLimit != null) {
+            rateLimiter = RateLimiter.create(rateLimit);
+        }
         this.fileSystem = FileSystem.get(config);
         this.dir = dir;
     }
@@ -85,8 +106,8 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
      */
     @Override
     public OutputWrapper openWriteStream(String target,
-                                         OutputStreamFlags outputFlags,
-                                         OutputStreamEmitter streamEmitter) throws IOException {
+            OutputStreamFlags outputFlags,
+            OutputStreamEmitter streamEmitter) throws IOException {
         log.debug("[open] {}target={} hdfs", outputFlags, target);
         String modifiedTarget = getModifiedTarget(target, outputFlags);
         Path targetPath = new Path(dir, modifiedTarget);
@@ -95,17 +116,25 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
         FSDataOutputStream outputStream;
         if (exists) {
             log.debug("[open.append]{}/ renaming to {}/{}",
-                      targetPath, targetPathTmp, fileSystem.exists(targetPathTmp));
+                    targetPath, targetPathTmp, fileSystem.exists(targetPathTmp));
             if (!fileSystem.rename(targetPath, targetPathTmp)) {
                 throw new IOException("Unable to rename " + targetPath.toUri() + " to " + targetPathTmp.toUri());
             }
+            tryAcquireRateLimiter();
             outputStream = fileSystem.append(targetPathTmp);
         } else {
+            tryAcquireRateLimiter();
             outputStream = fileSystem.create(targetPathTmp, false);
         }
         OutputStream wrappedStream = wrapOutputStream(outputFlags, exists, outputStream);
         return new HDFSOutputWrapper(wrappedStream, streamEmitter, outputFlags.isCompress(),
-                                     outputFlags.getCompressType(), target, targetPath, targetPathTmp, fileSystem);
+                outputFlags.getCompressType(), target, targetPath, targetPathTmp, fileSystem);
+    }
+
+    private void tryAcquireRateLimiter() {
+        if (rateLimiter != null) {
+            rateLimiter.acquire();
+        }
     }
 
     private String getModifiedTarget(String target, OutputStreamFlags outputFlags) throws IOException {
@@ -118,8 +147,8 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
             Path testTmp = new Path(dir, modifiedFileName.concat(".tmp"));
             boolean testExists = fileSystem.exists(test);
             if ((outputFlags.getMaxFileSize() > 0) &&
-                ((testExists && (fileLength(test) >= outputFlags.getMaxFileSize())) ||
-                 (fileSystem.exists(testTmp) && (fileLength(testTmp) >= outputFlags.getMaxFileSize())))) {
+                    ((testExists && (fileLength(test) >= outputFlags.getMaxFileSize())) ||
+                            (fileSystem.exists(testTmp) && (fileLength(testTmp) >= outputFlags.getMaxFileSize())))) {
                 // to big already
                 continue;
             }
