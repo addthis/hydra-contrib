@@ -61,8 +61,6 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
     private final Path dir;
     private final FileSystem fileSystem;
 
-    private RateLimiter rateLimiter;
-
     /**
      * Instantiates an HDFSOutputWrapperFactory object
      * @param hdfsUrl the url to the hdfs namenode, e.g. hdfs://whatever.com:9000
@@ -73,17 +71,13 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
     @JsonCreator
     public HDFSOutputWrapperFactory(@JsonProperty(value = "hdfsUrl", required = true) String hdfsUrl,
             @JsonProperty(value = "dir", required = true) Path dir,
-            @JsonProperty(value = "hdfsConfig") Map<String, String> configOpts,
-            @JsonProperty(value = "rateLimit") Integer rateLimit) throws IOException {
+            @JsonProperty(value = "hdfsConfig") Map<String, String> configOpts) throws IOException {
         Configuration config = new Configuration();
         config.set("fs.defaultFS", hdfsUrl);
         config.set("fs.automatic.close", "false");
         config.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
         if (configOpts != null) {
             configOpts.forEach(config::set);
-        }
-        if (rateLimit != null) {
-            rateLimiter = RateLimiter.create(rateLimit);
         }
         this.fileSystem = FileSystem.get(config);
         this.dir = dir;
@@ -120,21 +114,13 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
             if (!fileSystem.rename(targetPath, targetPathTmp)) {
                 throw new IOException("Unable to rename " + targetPath.toUri() + " to " + targetPathTmp.toUri());
             }
-            tryAcquireRateLimiter();
             outputStream = fileSystem.append(targetPathTmp);
         } else {
-            tryAcquireRateLimiter();
             outputStream = fileSystem.create(targetPathTmp, false);
         }
         OutputStream wrappedStream = wrapOutputStream(outputFlags, exists, outputStream);
         return new HDFSOutputWrapper(wrappedStream, streamEmitter, outputFlags.isCompress(),
                 outputFlags.getCompressType(), target, targetPath, targetPathTmp, fileSystem);
-    }
-
-    private void tryAcquireRateLimiter() {
-        if (rateLimiter != null) {
-            rateLimiter.acquire();
-        }
     }
 
     private String getModifiedTarget(String target, OutputStreamFlags outputFlags) throws IOException {
