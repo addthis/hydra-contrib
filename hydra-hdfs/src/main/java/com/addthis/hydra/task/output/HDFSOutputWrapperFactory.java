@@ -99,7 +99,7 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
      * @throws IOException propagated from underlying components
      */
     @Override
-    public OutputWrapper openWriteStream(String target,
+    public synchronized OutputWrapper openWriteStream(String target,
             OutputStreamFlags outputFlags,
             OutputStreamEmitter streamEmitter) throws IOException {
         log.debug("[open] {}target={} hdfs", outputFlags, target);
