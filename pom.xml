@@ -18,12 +18,12 @@
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
     <!-- change for release (1 of 2) -->
-    <version>5.6.49-SNAPSHOT</version>
+    <version>5.6.48-SNAPSHOT</version>
   </parent>
 
   <groupId>com.addthis.hydra.contrib</groupId>
   <artifactId>hydra-contrib-parent</artifactId>
-  <version>5.6.49-SNAPSHOT</version>
+  <version>5.6.24-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Hydra Contrib: Parent</name>
