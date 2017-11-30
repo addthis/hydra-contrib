@@ -18,7 +18,7 @@
     <groupId>com.addthis.hydra</groupId>
     <artifactId>hydra-parent</artifactId>
     <!-- change for release (1 of 2) -->
-    <version>5.6.23</version>
+    <version>5.6.48-SNAPSHOT</version>
   </parent>
 
   <groupId>com.addthis.hydra.contrib</groupId>
@@ -46,7 +46,7 @@
   <properties>
     <at.check.jacoco.skip>true</at.check.jacoco.skip>
     <!-- change for release (2 of 2) -->
-    <hydra-oss.version>5.6.23</hydra-oss.version>
+    <hydra-oss.version>5.6.48-SNAPSHOT</hydra-oss.version>
   </properties>
 
   <!-- included in every submodule -->

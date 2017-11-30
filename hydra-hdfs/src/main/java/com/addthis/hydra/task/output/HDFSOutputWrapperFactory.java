@@ -15,6 +15,7 @@ package com.addthis.hydra.task.output;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -60,6 +61,7 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
     private final Path dir;
     private final FileSystem fileSystem;
 
+
     /**
      * Instantiates an HDFSOutputWrapperFactory object
      * @param hdfsUrl the url to the hdfs namenode, e.g. hdfs://whatever.com:9000
@@ -71,6 +73,7 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
     public HDFSOutputWrapperFactory(@JsonProperty(value = "hdfsUrl", required = true) String hdfsUrl,
             @JsonProperty(value = "dir", required = true) Path dir,
             @JsonProperty(value = "hdfsConfig") Map<String, String> configOpts) throws IOException {
+
         Configuration config = new Configuration();
         config.set("fs.defaultFS", hdfsUrl);
         config.set("fs.automatic.close", "false");
@@ -98,6 +101,7 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
      * @throws IOException propagated from underlying components
      */
     @Override
+
     public synchronized OutputWrapper openWriteStream(String target,
             OutputStreamFlags outputFlags,
             OutputStreamEmitter streamEmitter) throws IOException {
@@ -113,13 +117,16 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
             if (!fileSystem.rename(targetPath, targetPathTmp)) {
                 throw new IOException("Unable to rename " + targetPath.toUri() + " to " + targetPathTmp.toUri());
             }
+            tryAcquireRateLimiter();
             outputStream = fileSystem.append(targetPathTmp);
         } else {
+            tryAcquireRateLimiter();
             outputStream = fileSystem.create(targetPathTmp, false);
         }
         OutputStream wrappedStream = wrapOutputStream(outputFlags, exists, outputStream);
         return new HDFSOutputWrapper(wrappedStream, streamEmitter, outputFlags.isCompress(),
                 outputFlags.getCompressType(), target, targetPath, targetPathTmp, fileSystem);
+
     }
 
     private String getModifiedTarget(String target, OutputStreamFlags outputFlags) throws IOException {
