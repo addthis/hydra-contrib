@@ -117,10 +117,8 @@ public class HDFSOutputWrapperFactory implements OutputWrapperFactory {
             if (!fileSystem.rename(targetPath, targetPathTmp)) {
                 throw new IOException("Unable to rename " + targetPath.toUri() + " to " + targetPathTmp.toUri());
             }
-            tryAcquireRateLimiter();
             outputStream = fileSystem.append(targetPathTmp);
         } else {
-            tryAcquireRateLimiter();
             outputStream = fileSystem.create(targetPathTmp, false);
         }
         OutputStream wrappedStream = wrapOutputStream(outputFlags, exists, outputStream);
