@@ -11,7 +11,7 @@
 
     <properties>
         <bundle.version>2.8.1</bundle.version>
-        <kafka.version>0.10.2.0</kafka.version>
+        <kafka.version>0.10.2.1</kafka.version>
         <metrics.version>2.2.0</metrics.version>
         <zookeeper.version>3.4.9</zookeeper.version>
     </properties>
@@ -67,14 +67,29 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- addthis deps -->
+        <dependency>
+            <groupId>com.addthis.basis</groupId>
+            <artifactId>basis-core</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.addthis</groupId>
             <artifactId>bundle</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.addthis.hydra</groupId>
+            <artifactId>hydra-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.addthis.hydra</groupId>
+            <artifactId>hydra-task</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.addthis.metrics</groupId>
             <artifactId>reporter-config</artifactId>
         </dependency>
+
+        <!-- 3rd party -->
         <dependency>
             <groupId>com.yammer.metrics</groupId>
             <artifactId>metrics-ganglia</artifactId>
