@@ -15,7 +15,11 @@ package com.addthis.hydra.kafka.bundle;
 
 import java.io.File;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -25,6 +29,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Properties;
 
 import com.addthis.basis.util.LessFiles;
 
@@ -32,8 +37,7 @@ import com.addthis.bark.ZkUtil;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
-import com.addthis.codec.annotations.Time;
-import com.addthis.hydra.data.util.DateUtil;
+import com.addthis.hydra.kafka.KafkaUtils;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.task.run.TaskRunConfig;
@@ -49,13 +53,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.framework.CuratorFramework;
 
-import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.addthis.hydra.kafka.bundle.BundleWrapper.bundleQueueEndMarker;
-import kafka.javaapi.PartitionMetadata;
-import kafka.javaapi.TopicMetadata;
+
+import org.apache.kafka.common.Node;
+import org.apache.kafka.common.PartitionInfo;
 
 public class KafkaSource extends TaskDataSource {
 
@@ -66,7 +70,7 @@ public class KafkaSource extends TaskDataSource {
     @JsonProperty(required = true)
     private String topic;
     @JsonProperty
-    private String startDate;
+    private String initialOffset = "earliest";
     @JsonProperty
     private String dateFormat = "YYMMdd";
     @JsonProperty
@@ -77,12 +81,6 @@ public class KafkaSource extends TaskDataSource {
     /** Specifies conversion to bundles.  If null, then uses DataChannelCodec.decodeBundle */
     @JsonProperty
     private BundleizerFactory format;
-
-    @JsonProperty
-    private int metadataRetries = 6;
-    @Time(TimeUnit.MILLISECONDS)
-    @JsonProperty
-    private long metadataBackoff = 10000;
 
     @JsonProperty
     private int fetchThreads = 1;
@@ -98,10 +96,15 @@ public class KafkaSource extends TaskDataSource {
     @JsonProperty
     private int pollRetries = 180;
 
+    @JsonProperty
+    private String bootstrapServers;
+    @JsonProperty
+    private Map<String, String> overrideProperties = new HashMap();
+
+    Properties consumerProperties;
     PageDB<SimpleMark> markDb;
     AtomicBoolean running;
     LinkedBlockingQueue<BundleWrapper> bundleQueue;
-    CuratorFramework zkClient;
     final ConcurrentMap<String, Long> sourceOffsets = new ConcurrentHashMap<>();
 
     private ExecutorService fetchExecutor;
@@ -176,7 +179,6 @@ public class KafkaSource extends TaskDataSource {
             log.info("updating mark db, source: {}, index: {}", sourceOffset.getKey(), sourceOffset.getValue());
         }
         this.markDb.close();
-        this.zkClient.close();
     }
 
     @Override
@@ -207,28 +209,24 @@ public class KafkaSource extends TaskDataSource {
                                     .setDaemon(true)
                                     .build());
             this.running = new AtomicBoolean(true);
-            final DateTime startTime = (startDate != null) ? DateUtil.getDateTime(dateFormat, startDate) : null;
 
-            zkClient = ZkUtil.makeStandardClient(zookeeper, false);
-            TopicMetadata metadata = null;
-            int metadataAttempt = 0;
-            while(metadata == null && metadataAttempt < metadataRetries) {
-                try {
-                    metadata = ConsumerUtils.getTopicMetadata(zkClient, seedBrokers, topic);
-                } catch(Exception e) {
-                    log.error("failed to get kafka metadata (attempt {} / {}) for topic: {}, using brokers: {}, error: {}", metadataAttempt, metadataRetries, topic, seedBrokers, e);
-                    Thread.sleep(metadataBackoff);
-                }
-                metadataAttempt++;
+            if(bootstrapServers == null) {
+                CuratorFramework zkClient = ZkUtil.makeStandardClient(zookeeper, false);
+                Collection<Node> brokers = KafkaUtils.getSeedKafkaBrokers(zkClient, seedBrokers).values();
+                bootstrapServers = brokerListString(brokers);
+                zkClient.close();
             }
+            consumerProperties = createConsumerProperties(bootstrapServers, overrideProperties);
 
-            final Integer[] shards = config.calcShardList(metadata.partitionsMetadata().size());
+            List<PartitionInfo> topicMetadata = ConsumerUtils.getTopicsMetadata(this, Arrays.asList(topic)).get(topic);
+
+            final Integer[] shards = config.calcShardList(topicMetadata.size());
             final ListBundleFormat bundleFormat = new ListBundleFormat();
             final CountDownLatch decodeLatch = new CountDownLatch(shards.length);
             for (final int shard : shards) {
                 LinkedBlockingQueue<MessageWrapper> messageQueue = new LinkedBlockingQueue<>(this.queueSize);
-                final PartitionMetadata partition = metadata.partitionsMetadata().get(shard);
-                FetchTask fetcher = new FetchTask(this, topic, partition, startTime, messageQueue);
+                final PartitionInfo partition = topicMetadata.get(shard);
+                FetchTask fetcher = new FetchTask(this, topic, partition, initialOffset, messageQueue);
                 fetchExecutor.execute(fetcher);
                 Runnable decoder = new DecodeTask(decodeLatch, format, bundleFormat, running, messageQueue, bundleQueue);
                 decodeExecutor.execute(decoder);
@@ -255,5 +253,27 @@ public class KafkaSource extends TaskDataSource {
                 // ignored
             }
         }
+    }
+
+    private static String brokerListString(Collection<Node> brokers) {
+        StringBuilder stringBuilder = new StringBuilder();
+        boolean first = true;
+        for(Node broker : brokers) {
+            if(!first) {
+                stringBuilder.append(",");
+            }
+            stringBuilder.append(broker.host()).append(":").append(broker.port());
+            first = false;
+        }
+        return stringBuilder.toString();
+    }
+
+    private static Properties createConsumerProperties(String bootstrapServers, Map<String, String> overrideProperties) {
+        Properties props = new Properties();
+        props.putAll(overrideProperties);
+        props.put("bootstrap.servers", bootstrapServers);
+        props.put("enable.auto.commit", false);
+        props.put("auto.offset.reset", "earliest");
+        return props;
     }
 }

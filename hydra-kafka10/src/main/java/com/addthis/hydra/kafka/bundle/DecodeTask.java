@@ -89,10 +89,7 @@ class DecodeTask implements Runnable {
         if (messageWrapper != null) {
             Bundle bundle = null;
             try {
-                Message message = messageWrapper.messageAndOffset.message();
-                ByteBuffer payload = message.payload();
-                byte[] messageBytes = Arrays.copyOfRange(payload.array(), payload.arrayOffset(),
-                                                         payload.arrayOffset() + payload.limit());
+                byte[] messageBytes = messageWrapper.message;
                 // temporary hack to avoid unnecessary array copies to input streams and back (caused by the bundleizer interface)
                 // if no bundleizer is specified, then default to calling DataChannelCodec.decodeBundle directly.
                 if(bundleizerFactory == null) {
@@ -102,15 +99,13 @@ class DecodeTask implements Runnable {
                     bundle = bundleizer.next();
                 }
             } catch (Exception e) {
-                log.error("failed to decode bundle from host: {}, topic: {}, partition: {}, offset: {}, bytes: {}",
-                          messageWrapper.host, messageWrapper.topic, messageWrapper.partition,
-                          messageWrapper.messageAndOffset.nextOffset(),
-                          messageWrapper.messageAndOffset.message().payloadSize());
+                log.error("failed to decode bundle from topic: {}, partition: {}",
+                          messageWrapper.topic, messageWrapper.partition);
                 log.error("decode exception: ", e);
             }
             if (bundle != null) {
                 putWhileRunning(bundleQueue, new BundleWrapper(bundle, messageWrapper.sourceIdentifier,
-                                                               messageWrapper.messageAndOffset.nextOffset()), running);
+                        messageWrapper.offset), running);
             }
         }
         return true;
