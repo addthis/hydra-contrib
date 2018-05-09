@@ -13,37 +13,24 @@
  */
 package com.addthis.hydra.kafka.bundle;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.addthis.basis.util.Parameter;
-
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.task.source.SimpleMark;
-
-import org.joda.time.DateTime;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
+import java.util.Properties;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static com.addthis.hydra.kafka.bundle.KafkaSource.putWhileRunning;
-import kafka.api.FetchRequest;
-import kafka.api.FetchRequestBuilder;
-import kafka.cluster.BrokerEndPoint;
-import kafka.common.ErrorMapping;
-import kafka.javaapi.FetchResponse;
-import kafka.javaapi.PartitionMetadata;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import kafka.javaapi.message.ByteBufferMessageSet;
-import kafka.message.MessageAndOffset;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.PartitionInfo;
 
 class FetchTask implements Runnable {
 
@@ -117,7 +104,7 @@ class FetchTask implements Runnable {
                     topic, partitionId, startOffset, endOffset);
             // fetch from broker, add to queue (decoder threads will process queue in parallel)
             long offset = startOffset;
-            while (running.get() && (offset <= endOffset)) {
+            while (running.get() && (offset < endOffset)) {
                 ConsumerRecords<byte[],byte[]> records = consumer.poll(timeout);
                 if(!records.isEmpty()) {
                     for (ConsumerRecord<byte[], byte[]> record : records) {

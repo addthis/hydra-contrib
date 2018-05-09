@@ -13,8 +13,6 @@
  */
 package com.addthis.hydra.kafka.bundle;
 
-import kafka.message.MessageAndOffset;
-
 class MessageWrapper {
 
     static final MessageWrapper messageQueueEndMarker = new MessageWrapper(0, null, null, 0, null);

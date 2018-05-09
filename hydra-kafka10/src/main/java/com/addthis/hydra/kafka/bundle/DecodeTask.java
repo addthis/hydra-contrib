@@ -13,29 +13,23 @@
  */
 package com.addthis.hydra.kafka.bundle;
 
-import java.io.ByteArrayInputStream;
-
-import java.util.Arrays;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import java.nio.ByteBuffer;
-
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelCodec;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
 import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static com.addthis.hydra.kafka.bundle.KafkaSource.putWhileRunning;
 import static com.addthis.hydra.kafka.bundle.MessageWrapper.messageQueueEndMarker;
-import kafka.message.Message;
 
 class DecodeTask implements Runnable {
 

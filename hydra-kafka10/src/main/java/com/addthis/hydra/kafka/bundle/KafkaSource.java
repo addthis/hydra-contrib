@@ -271,6 +271,8 @@ public class KafkaSource extends TaskDataSource {
     private static Properties createConsumerProperties(String bootstrapServers, Map<String, String> overrideProperties) {
         Properties props = new Properties();
         props.putAll(overrideProperties);
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
         props.put("bootstrap.servers", bootstrapServers);
         props.put("enable.auto.commit", false);
         props.put("auto.offset.reset", "earliest");

@@ -5,13 +5,12 @@ import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelCodec;
 import org.apache.kafka.common.serialization.Deserializer;
-import kafka.serializer.Decoder;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Map;
 
-public class BundleDeserializer implements Deserializer<Bundle>, Decoder<Bundle> {
+public class BundleDeserializer implements Deserializer<Bundle> {
 
     private ListBundleFormat format = new ListBundleFormat();
 
@@ -30,7 +29,6 @@ public class BundleDeserializer implements Deserializer<Bundle>, Decoder<Bundle>
         // not needed
     }
 
-    @Override
     public Bundle fromBytes(byte[] bytes) {
         try {
             return DataChannelCodec.decodeBundle(new ListBundle(format), bytes);
