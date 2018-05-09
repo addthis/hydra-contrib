@@ -49,6 +49,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.framework.CuratorFramework;
@@ -61,6 +62,7 @@ import static com.addthis.hydra.kafka.bundle.BundleWrapper.bundleQueueEndMarker;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.PartitionInfo;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class KafkaSource extends TaskDataSource {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaSource.class);
