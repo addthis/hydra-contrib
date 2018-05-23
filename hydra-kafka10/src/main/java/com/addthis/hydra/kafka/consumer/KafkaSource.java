@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.kafka.bundle;
+package com.addthis.hydra.kafka.consumer;
 
 import java.io.File;
 
@@ -38,6 +38,7 @@ import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.hydra.kafka.KafkaUtils;
+import com.addthis.hydra.kafka.bundle.BenignKafkaException;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.task.run.TaskRunConfig;
@@ -57,7 +58,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.addthis.hydra.kafka.bundle.BundleWrapper.bundleQueueEndMarker;
+import static com.addthis.hydra.kafka.consumer.BundleWrapper.bundleQueueEndMarker;
 
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.PartitionInfo;
@@ -101,7 +102,7 @@ public class KafkaSource extends TaskDataSource {
     @JsonProperty
     private String bootstrapServers;
     @JsonProperty
-    private Map<String, String> overrideProperties = new HashMap();
+    private Map<String, String> overrides = new HashMap();
 
     Properties consumerProperties;
     PageDB<SimpleMark> markDb;
@@ -218,9 +219,9 @@ public class KafkaSource extends TaskDataSource {
                 bootstrapServers = brokerListString(brokers);
                 zkClient.close();
             }
-            consumerProperties = createConsumerProperties(bootstrapServers, overrideProperties);
+            consumerProperties = createConsumerProperties(bootstrapServers, overrides);
 
-            List<PartitionInfo> topicMetadata = ConsumerUtils.getTopicsMetadata(this, Arrays.asList(topic)).get(topic);
+            List<PartitionInfo> topicMetadata = ConsumerUtils.getTopicsMetadata(consumerProperties, Arrays.asList(topic)).get(topic);
 
             final Integer[] shards = config.calcShardList(topicMetadata.size());
             final ListBundleFormat bundleFormat = new ListBundleFormat();

@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.kafka.bundle;
+package com.addthis.hydra.kafka.consumer;
 
 import com.addthis.bundle.core.Bundle;
 

@@ -11,12 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.kafka.bundle;
+package com.addthis.hydra.kafka.consumer;
 
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelCodec;
+import com.addthis.hydra.kafka.bundle.BenignKafkaException;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
 import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 import org.slf4j.Logger;
@@ -28,8 +29,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.addthis.hydra.kafka.bundle.KafkaSource.putWhileRunning;
-import static com.addthis.hydra.kafka.bundle.MessageWrapper.messageQueueEndMarker;
+import static com.addthis.hydra.kafka.consumer.KafkaSource.putWhileRunning;
+import static com.addthis.hydra.kafka.consumer.MessageWrapper.messageQueueEndMarker;
 
 class DecodeTask implements Runnable {
 
@@ -99,7 +100,7 @@ class DecodeTask implements Runnable {
             }
             if (bundle != null) {
                 putWhileRunning(bundleQueue, new BundleWrapper(bundle, messageWrapper.sourceIdentifier,
-                        messageWrapper.offset), running);
+                        messageWrapper.offset+1), running);
             }
         }
         return true;

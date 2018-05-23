@@ -11,11 +11,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.kafka.bundle;
+package com.addthis.hydra.kafka.consumer;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -27,11 +28,11 @@ public final class ConsumerUtils {
 
     private static final Logger log = LoggerFactory.getLogger(ConsumerUtils.class);
 
-    public static Map<String, List<PartitionInfo>> getTopicsMetadata(KafkaSource kafkaSource, List<String> topics) {
+    public static Map<String, List<PartitionInfo>> getTopicsMetadata(Properties consumerProperties, List<String> topics) {
         KafkaConsumer consumer = null;
         Map<String, List<PartitionInfo>> topicsMetadata = null;
         try {
-            consumer = new KafkaConsumer(kafkaSource.consumerProperties);
+            consumer = new KafkaConsumer(consumerProperties);
             topicsMetadata = new HashMap<>();
             for(String topic : topics){
                 topicsMetadata.put(topic, consumer.partitionsFor(topic));

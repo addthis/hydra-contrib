@@ -11,13 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.kafka.bundle;
+package com.addthis.hydra.kafka.consumer;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.addthis.hydra.kafka.bundle.KafkaSource.putWhileRunning;
+import static com.addthis.hydra.kafka.consumer.KafkaSource.putWhileRunning;
 
 class MarkEndTask<T> implements Runnable {
 

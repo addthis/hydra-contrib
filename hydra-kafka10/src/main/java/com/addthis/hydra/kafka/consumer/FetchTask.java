@@ -11,9 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.addthis.hydra.kafka.bundle;
+package com.addthis.hydra.kafka.consumer;
 
 import com.addthis.basis.util.Parameter;
+import com.addthis.hydra.kafka.bundle.BenignKafkaException;
 import com.addthis.hydra.store.db.DBKey;
 import com.addthis.hydra.store.db.PageDB;
 import com.addthis.hydra.task.source.SimpleMark;
@@ -30,7 +31,7 @@ import java.util.Properties;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.addthis.hydra.kafka.bundle.KafkaSource.putWhileRunning;
+import static com.addthis.hydra.kafka.consumer.KafkaSource.putWhileRunning;
 
 class FetchTask implements Runnable {
 
