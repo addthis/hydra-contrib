@@ -60,6 +60,11 @@
         <artifactId>log4j</artifactId>
         <version>1.2.16</version>
       </dependency>
+      <dependency>
+        <groupId>xml-apis</groupId>
+        <artifactId>xml-apis</artifactId>
+        <version>1.4.01</version>
+      </dependency>
 
       <!-- just relist these modules here to make jenkins happy -->
       <dependency>
