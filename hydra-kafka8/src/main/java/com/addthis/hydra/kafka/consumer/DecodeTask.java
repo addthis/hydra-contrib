@@ -27,6 +27,8 @@ import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
 import com.addthis.bundle.io.DataChannelCodec;
+import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.value.ValueFactory;
 import com.addthis.hydra.task.source.bundleizer.Bundleizer;
 import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 
@@ -44,15 +46,17 @@ class DecodeTask implements Runnable {
     private final CountDownLatch decodeLatch;
     private final BundleizerFactory bundleizerFactory;
     private final ListBundleFormat format;
+    private final AutoField injectSourceName;
     private final AtomicBoolean running;
     private final BlockingQueue<MessageWrapper> messageQueue;
     private final BlockingQueue<BundleWrapper> bundleQueue;
 
     public DecodeTask(CountDownLatch decodeLatch, BundleizerFactory bundleizerFactory,
-                      ListBundleFormat format, AtomicBoolean running,
+                      ListBundleFormat format, AutoField injectSourceName, AtomicBoolean running,
                       BlockingQueue<MessageWrapper> messageQueue, BlockingQueue<BundleWrapper> bundleQueue) {
         this.running = running;
         this.bundleizerFactory = bundleizerFactory;
+        this.injectSourceName = injectSourceName;
         this.messageQueue = messageQueue;
         this.bundleQueue = bundleQueue;
         this.decodeLatch = decodeLatch;
@@ -109,6 +113,9 @@ class DecodeTask implements Runnable {
                 log.error("decode exception: ", e);
             }
             if (bundle != null) {
+                if(injectSourceName != null) {
+                    injectSourceName.setValue(bundle, ValueFactory.create(messageWrapper.sourceIdentifier));
+                }
                 putWhileRunning(bundleQueue, new BundleWrapper(bundle, messageWrapper.sourceIdentifier,
                                                                messageWrapper.messageAndOffset.nextOffset()), running);
             }

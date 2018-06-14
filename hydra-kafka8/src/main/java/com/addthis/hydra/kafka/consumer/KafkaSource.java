@@ -32,6 +32,8 @@ import com.addthis.bark.ZkUtil;
 import com.addthis.bundle.channel.DataChannelError;
 import com.addthis.bundle.core.Bundle;
 import com.addthis.bundle.core.list.ListBundleFormat;
+import com.addthis.bundle.util.AutoField;
+import com.addthis.bundle.value.ValueFactory;
 import com.addthis.codec.annotations.Time;
 import com.addthis.hydra.data.util.DateUtil;
 import com.addthis.hydra.store.db.DBKey;
@@ -77,6 +79,8 @@ public class KafkaSource extends TaskDataSource {
     /** Specifies conversion to bundles.  If null, then uses DataChannelCodec.decodeBundle */
     @JsonProperty
     private BundleizerFactory format;
+    @JsonProperty
+    private AutoField injectSourceName;
 
     @JsonProperty
     private int metadataRetries = 6;
@@ -230,7 +234,7 @@ public class KafkaSource extends TaskDataSource {
                 final PartitionMetadata partition = metadata.partitionsMetadata().get(shard);
                 FetchTask fetcher = new FetchTask(this, topic, partition, startTime, messageQueue);
                 fetchExecutor.execute(fetcher);
-                Runnable decoder = new DecodeTask(decodeLatch, format, bundleFormat, running, messageQueue, bundleQueue);
+                Runnable decoder = new DecodeTask(decodeLatch, format, bundleFormat, injectSourceName, running, messageQueue, bundleQueue);
                 decodeExecutor.execute(decoder);
             }
             decodeExecutor.submit(new MarkEndTask<>(decodeLatch, running, bundleQueue, bundleQueueEndMarker));
