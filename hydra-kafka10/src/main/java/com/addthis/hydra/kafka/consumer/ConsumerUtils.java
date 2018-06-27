@@ -13,10 +13,13 @@
  */
 package com.addthis.hydra.kafka.consumer;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Collections;
 
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -35,7 +38,17 @@ public final class ConsumerUtils {
             consumer = new KafkaConsumer(consumerProperties);
             topicsMetadata = new HashMap<>();
             for(String topic : topics){
-                topicsMetadata.put(topic, consumer.partitionsFor(topic));
+                List<PartitionInfo> toBeSortedPartitionInfo = consumer.partitionsFor(topic);
+                List<PartitionInfo> sortedList = new ArrayList<>();
+                for(PartitionInfo partitionInfo : toBeSortedPartitionInfo){
+                    sortedList.add(partitionInfo);
+                }
+                Collections.sort(sortedList, new Comparator<PartitionInfo>() {
+                      @Override public int compare(PartitionInfo o1, PartitionInfo o2) {
+                        return o1.partition()-o2.partition();
+                     }
+                    });
+                topicsMetadata.put(topic, sortedList);
             }
         } catch (Exception e) {
             log.error("getTopicsMetadata failed: ", e);
