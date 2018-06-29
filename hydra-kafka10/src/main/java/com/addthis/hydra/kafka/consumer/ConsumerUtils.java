@@ -43,11 +43,7 @@ public final class ConsumerUtils {
                 for(PartitionInfo partitionInfo : toBeSortedPartitionInfo){
                     sortedList.add(partitionInfo);
                 }
-                Collections.sort(sortedList, new Comparator<PartitionInfo>() {
-                      @Override public int compare(PartitionInfo o1, PartitionInfo o2) {
-                        return o1.partition()-o2.partition();
-                     }
-                    });
+                Collections.sort(sortedList, (PartitionInfo p1, PartitionInfo p2)->(p1.partition()-p2.partition()));
                 topicsMetadata.put(topic, sortedList);
             }
         } catch (Exception e) {
