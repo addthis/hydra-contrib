@@ -17,9 +17,10 @@ import java.io.File;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -29,7 +30,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.Properties;
 
 import com.addthis.basis.util.LessFiles;
 
@@ -50,19 +50,18 @@ import com.addthis.hydra.task.source.bundleizer.BundleizerFactory;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.kafka.common.Node;
+import org.apache.kafka.common.PartitionInfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.addthis.hydra.kafka.consumer.BundleWrapper.bundleQueueEndMarker;
-
-import org.apache.kafka.common.Node;
-import org.apache.kafka.common.PartitionInfo;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class KafkaSource extends TaskDataSource {
@@ -201,19 +200,19 @@ public class KafkaSource extends TaskDataSource {
             this.markDb = new PageDB<>(LessFiles.initDirectory(markDir), SimpleMark.class, 100, 100);
             // move to init method
             this.fetchExecutor = new ThreadPoolExecutor(fetchThreads, fetchThreads,
-                            0L, TimeUnit.SECONDS,
-                            new LinkedBlockingQueue<>(),
-                            new ThreadFactoryBuilder()
-                                    .setNameFormat("source-kafka-fetch-%d")
-                                    .setDaemon(true)
-                                    .build());
+                                                        0L, TimeUnit.SECONDS,
+                                                        new LinkedBlockingQueue<>(),
+                                                        new ThreadFactoryBuilder()
+                                                                .setNameFormat("source-kafka-fetch-%d")
+                                                                .setDaemon(true)
+                                                                .build());
             this.decodeExecutor = new ThreadPoolExecutor(decodeThreads, decodeThreads,
-                            0L, TimeUnit.SECONDS,
-                            new LinkedBlockingQueue<>(),
-                            new ThreadFactoryBuilder()
-                                    .setNameFormat("source-kafka-decode-%d")
-                                    .setDaemon(true)
-                                    .build());
+                                                         0L, TimeUnit.SECONDS,
+                                                         new LinkedBlockingQueue<>(),
+                                                         new ThreadFactoryBuilder()
+                                                                 .setNameFormat("source-kafka-decode-%d")
+                                                                 .setDaemon(true)
+                                                                 .build());
             this.running = new AtomicBoolean(true);
 
             if(bootstrapServers == null) {
@@ -232,7 +231,7 @@ public class KafkaSource extends TaskDataSource {
             for (final int shard : shards) {
                 LinkedBlockingQueue<MessageWrapper> messageQueue = new LinkedBlockingQueue<>(this.queueSize);
                 final PartitionInfo partition = topicMetadata.get(shard);
-                FetchTask fetcher = new FetchTask(this, topic, partition, initialOffset, messageQueue);
+                FetchTask fetcher = new FetchTask(this, topic, partition, initialOffset, messageQueue, sourceOffsets::compute);
                 fetchExecutor.execute(fetcher);
                 Runnable decoder = new DecodeTask(decodeLatch, format, bundleFormat, injectSourceName, running, messageQueue, bundleQueue);
                 decodeExecutor.execute(decoder);
