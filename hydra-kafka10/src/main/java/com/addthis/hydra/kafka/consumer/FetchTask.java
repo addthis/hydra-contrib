@@ -108,6 +108,8 @@ class FetchTask implements Runnable {
                 startOffset = consumer.position(topicPartition);
             }
 
+            // Insert startOffset before consuming from the topic as a safety measure
+            // This also allows startOffset of "latest" to update marksDb even if no events are consumed
             kafkaSourceOffsetUpdater.accept(sourceIdentifier, (key, oldValue) ->
                     oldValue == null ? startOffset : Math.max(oldValue, startOffset));
 
